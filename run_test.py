@@ -1,19 +1,14 @@
 import asyncio
-import sys
 from app.graph import get_planner
 from app.models import TravelPlanRequest
+import json
 
 async def main():
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     planner = get_planner()
     req = TravelPlanRequest(message='plan a trip to Tokyo from 18-08-2026 to 02-09-2026 from Delhi for one traveler.')
     res = await planner.run(req)
-    print("STATUS:", res.status)
-    print("MESSAGE:", res.message)
-    print("ERRORS:", res.errors)
-    print("FLIGHTS_LEN:", len(res.flights))
-    print("FLIGHTS:", res.flights)
+    with open("test_output.json", "w") as f:
+        f.write(res.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     asyncio.run(main())

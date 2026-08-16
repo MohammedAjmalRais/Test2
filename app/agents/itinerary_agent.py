@@ -13,7 +13,7 @@ Treat prices as estimates, not guarantees. Return JSON:
   "food": number|null,
   "local_transport": number|null,
   "total": number|null,
-  "currency": "USD",
+  "currency": "INR",
   "notes": string,
   "breakdown": object
 }
@@ -23,7 +23,7 @@ Treat prices as estimates, not guarantees. Return JSON:
 ITINERARY_SYSTEM = """You create practical, personalized day-by-day travel itineraries.
 Use flights, hotels, weather, research, budget, and user preferences.
 Be specific but realistic about timing, neighborhoods, and travel time.
-Write in clear markdown with headings per day."""
+Write in clear plain text. DO NOT use markdown formatting characters such as asterisks (*), hash symbols (#), underscores (_), or backticks (`). Use plain text formatting only."""
 
 
 class ItineraryAgent:

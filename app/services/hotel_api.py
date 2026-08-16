@@ -24,7 +24,7 @@ class HotelApiService:
         check_in: str,
         check_out: str,
         adults: int = 1,
-        currency: str = "USD",
+        currency: str = "INR",
     ) -> dict[str, Any]:
         params: dict[str, Any] = {
             "engine": "google_hotels",

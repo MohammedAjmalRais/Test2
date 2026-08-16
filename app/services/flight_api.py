@@ -25,7 +25,7 @@ class FlightApiService:
         departure_date: str,
         return_date: str | None = None,
         adults: int = 1,
-        currency: str = "USD",
+        currency: str = "INR",
     ) -> dict[str, Any]:
         params: dict[str, Any] = {
             "engine": "google_flights",
@@ -35,6 +35,7 @@ class FlightApiService:
             "adults": adults,
             "currency": currency,
             "type": 1 if return_date else 2,
+            "deep_search": "true",
         }
         if return_date:
             params["return_date"] = return_date

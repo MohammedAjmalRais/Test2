@@ -4,7 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.config import get_settings
 from app.graph import get_planner
-from app.models import TravelPlanRequest, TravelPlanResponse
+from app.models import TravelPlanRequest, TravelPlanResponse, ChatInitRequest, ChatQueryRequest
+from app.rag_service import init_vector_store, query_itinerary_stream
+from fastapi.responses import StreamingResponse
 
 app = FastAPI(
     title="AI Travel Planner",
@@ -17,7 +19,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,3 +53,23 @@ async def create_travel_plan(request: TravelPlanRequest) -> TravelPlanResponse:
 
     planner = get_planner()
     return await planner.run(request)
+
+
+@app.post("/chat/init")
+async def init_chat(request: ChatInitRequest) -> dict[str, str]:
+    if not request.itinerary_text.strip():
+        raise HTTPException(status_code=400, detail="Itinerary text is required.")
+    
+    init_vector_store(request.session_id, request.itinerary_text)
+    return {"status": "success", "message": "Vector store initialized."}
+
+
+@app.post("/chat/query")
+async def query_chat(request: ChatQueryRequest) -> StreamingResponse:
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query is required.")
+        
+    return StreamingResponse(
+        query_itinerary_stream(request.session_id, request.query),
+        media_type="text/event-stream"
+    )

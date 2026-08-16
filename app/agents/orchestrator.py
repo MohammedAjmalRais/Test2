@@ -17,7 +17,7 @@ Return JSON with this shape:
     "travelers": integer,
     "budget_preference": "low"|"moderate"|"high"|"luxury"|null,
     "budget_amount": number|null,
-    "currency": "USD",
+    "currency": "INR",
     "preferences": [string],
     "constraints": [string],
     "trip_purpose": string|null,
@@ -75,7 +75,7 @@ Extract travel requirements and identify missing critical information."""
         if not ctx.get("travelers"):
             ctx["travelers"] = 1
         if not ctx.get("currency"):
-            ctx["currency"] = "USD"
+            ctx["currency"] = "INR"
 
         duration = ctx.get("duration_days")
         if duration and not ctx.get("departure_date"):

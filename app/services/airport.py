@@ -53,6 +53,11 @@ class AirportService:
                 score = 60
             elif needle in country:
                 score = 20
+                
+            # Tie-breaker for major airports
+            if score > 0 and 'international' in name:
+                score += 5
+                
             if score:
                 matches.append(
                     (

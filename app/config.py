@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     )
 
     google_api_key: str = ""
+    groq_api_key: str = ""
     flight_api_key: str = ""
     hotel_api_key: str = ""
     openweather_api_key: str = ""

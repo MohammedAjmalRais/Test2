@@ -16,7 +16,7 @@ class TravelContext(BaseModel):
     travelers: int = 1
     budget_preference: Literal["low", "moderate", "high", "luxury"] | None = None
     budget_amount: float | None = None
-    currency: str = "USD"
+    currency: str = "INR"
     preferences: list[str] = Field(default_factory=list)
     constraints: list[str] = Field(default_factory=list)
     trip_purpose: str | None = None
@@ -40,7 +40,7 @@ class FlightOption(BaseModel):
     duration: str | None = None
     stops: int | None = None
     price: float | None = None
-    currency: str = "USD"
+    currency: str = "INR"
     booking_link: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
@@ -78,7 +78,7 @@ class BudgetEstimate(BaseModel):
     food: float | None = None
     local_transport: float | None = None
     total: float | None = None
-    currency: str = "USD"
+    currency: str = "INR"
     notes: str = ""
     breakdown: dict[str, Any] = Field(default_factory=dict)
 
@@ -106,3 +106,11 @@ class TravelPlanResponse(BaseModel):
     itinerary: str | None = None
     session_context: dict[str, Any] | None = None
     errors: list[str] = Field(default_factory=list)
+
+class ChatInitRequest(BaseModel):
+    session_id: str
+    itinerary_text: str
+
+class ChatQueryRequest(BaseModel):
+    session_id: str
+    query: str
