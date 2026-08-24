@@ -1,465 +1,232 @@
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import './index.css'
+import { useState } from 'react';
+import Hero from '@/components/Hero';
+import Login from '@/components/Login';
+import Results from '@/components/Results';
+import './index.css';
 
-interface Flight {
-  airline: string;
-  price: number;
-  duration: string;
-  departure_time?: string;
-  arrival_time?: string;
-}
-
-interface Hotel {
-  name: string;
-  price_per_night: number;
-  rating?: number;
-}
-
-interface WeatherForecast {
-  location: string;
-  summary: string;
-  daily: any[];
+interface TravelContext {
+  destination?: string;
+  destination_iata?: string;
+  origin?: string;
+  origin_iata?: string;
+  duration_days?: number;
+  departure_date?: string;
+  return_date?: string;
+  travelers?: number;
+  budget_preference?: string;
+  budget_amount?: number;
 }
 
 interface TravelPlanResponse {
-  status: string;
+  status: 'complete' | 'needs_clarification' | 'error';
   message: string;
   clarification_question?: string;
-  flights?: Flight[];
-  hotels?: Hotel[];
-  weather?: WeatherForecast;
+  travel_context?: TravelContext;
+  flights: any[];
+  hotels: any[];
+  weather?: any;
+  budget?: any;
   itinerary?: string;
-}
-
-type ViewState = 'home' | 'loading' | 'results';
-type TabState = 'itinerary' | 'flights' | 'hotels' | 'weather';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+  session_context?: any;
+  errors?: string[];
 }
 
 function App() {
-  const [view, setView] = useState<ViewState>('home');
-  const [activeTab, setActiveTab] = useState<TabState>('itinerary');
-  const [showAbout, setShowAbout] = useState(false);
-  
-  const [prompt, setPrompt] = useState('');
+  const [view, setView] = useState<'home' | 'login' | 'results' | 'loading' | 'clarify'>('home');
+  const [originalMessage, setOriginalMessage] = useState('');
   const [response, setResponse] = useState<TravelPlanResponse | null>(null);
+  const [clarificationText, setClarificationText] = useState('');
+  const [sessionId, setSessionId] = useState('');
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const [chatSessionId, setChatSessionId] = useState<string>('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim()) return;
-
+  // Trigger travel planning
+  const handlePlanTrip = async (prompt: string) => {
     setView('loading');
-    setResponse(null);
+    setOriginalMessage(prompt);
+    setApiError(null);
+
+    // Generate a unique session ID per planning session
+    const sid = 'session-' + Math.random().toString(36).substring(2, 11);
+    setSessionId(sid);
 
     try {
-      const res = await fetch('http://localhost:8000/plan', {
+      const res = await fetch('http://127.0.0.1:8000/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prompt })
       });
-      
-      const data = await res.json();
-      setResponse(data);
-      setView('results');
-      setActiveTab('itinerary');
 
-      if (data.status === 'complete' && data.itinerary) {
-        const sessionId = crypto.randomUUID();
-        setChatSessionId(sessionId);
-        try {
-          await fetch('http://localhost:8000/chat/init', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: sessionId, itinerary_text: data.itinerary })
-          });
-          setChatMessages([{ role: 'assistant', content: 'Hi! I am your AI Travel Assistant. Ask me any questions about your itinerary!' }]);
-        } catch (err) {
-          console.error("Failed to init chat", err);
-        }
+      if (!res.ok) {
+        throw new Error('Failed to connect to the travel planner backend.');
       }
-    } catch (error) {
-      console.error(error);
-      setResponse({ status: 'error', message: 'Failed to connect to the server.' });
-      setView('results');
+
+      const data: TravelPlanResponse = await res.json();
+      handleBackendResponse(data);
+    } catch (err: any) {
+      console.error(err);
+      setApiError(err.message || 'Server error occurred.');
+      setView('home');
     }
   };
 
-  const handleNewSearch = () => {
-    setPrompt('');
-    setView('home');
-    setChatSessionId('');
-    setIsChatOpen(false);
-    setChatMessages([]);
-  };
-
-  const handleChatSubmit = async (e: React.FormEvent) => {
+  // Submit clarification answer
+  const handleClarifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !chatSessionId) return;
+    if (!clarificationText.trim() || !response) return;
 
-    const query = chatInput.trim();
-    setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', content: query }, { role: 'assistant', content: '' }]);
-    setIsChatLoading(true);
+    const answer = clarificationText.trim();
+    setClarificationText('');
+    setView('loading');
 
     try {
-      const res = await fetch('http://localhost:8000/chat/query', {
+      const res = await fetch('http://127.0.0.1:8000/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: chatSessionId, query })
+        body: JSON.stringify({
+          message: originalMessage,
+          clarification_response: answer,
+          session_context: response.session_context
+        })
       });
 
-      if (!res.body) throw new Error("No body");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          setChatMessages(prev => {
-            const newMessages = [...prev];
-            const lastIndex = newMessages.length - 1;
-            newMessages[lastIndex] = {
-              ...newMessages[lastIndex],
-              content: newMessages[lastIndex].content + chunk
-            };
-            return newMessages;
-          });
-        }
+      if (!res.ok) {
+        throw new Error('Failed to connect to the travel planner backend.');
       }
-    } catch (err) {
+
+      const data: TravelPlanResponse = await res.json();
+      handleBackendResponse(data);
+    } catch (err: any) {
       console.error(err);
-      setChatMessages(prev => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1].content = "Sorry, I couldn't process your request right now.";
-        return newMessages;
-      });
-    } finally {
-      setIsChatLoading(false);
+      setApiError(err.message || 'Server error occurred.');
+      setView('home');
+    }
+  };
+
+  // Handle standard plan API response
+  const handleBackendResponse = (data: TravelPlanResponse) => {
+    setResponse(data);
+    if (data.status === 'needs_clarification') {
+      setView('clarify');
+    } else if (data.status === 'complete') {
+      setView('results');
+    } else {
+      setApiError(data.message || 'An error occurred during travel generation.');
+      setView('home');
     }
   };
 
   return (
-    <>
-      {/* Navbar is persistent across views or hidden in loading */}
-      {view !== 'loading' && (
-        <nav className="navbar">
-          <div className="logo" onClick={handleNewSearch} style={{cursor: 'pointer'}}>
-            Wanderlust AI
-          </div>
-          <div className="nav-links">
-            <span onClick={handleNewSearch}>Home</span>
-            <span>Destinations</span>
-            <span>Eco-Travel</span>
-            <span onClick={() => setShowAbout(true)}>About</span>
-          </div>
-          {view === 'results' ? (
-            <button className="btn-primary" onClick={handleNewSearch}>New Search</button>
-          ) : (
-            <button className="btn-primary">Get Started</button>
-          )}
-        </nav>
-      )}
-
-      {/* HOME VIEW */}
+    <div className="w-full min-h-svh bg-white">
+      {/* 1. HOME VIEW */}
       {view === 'home' && (
-        <div className="view-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-          <div className="hero-section">
-            <img src="/hero_bg.jpg" alt="Beautiful landscape" className="hero-bg" />
-            <div className="hero-overlay"></div>
-            <h1 className="hero-title">Plan Your Perfect Trip Easily</h1>
-            <p className="hero-subtitle">Discover sustainable, eco-friendly travel plans orchestrated by advanced AI.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="search-container" style={{ margin: '-40px auto 0 auto' }}>
-            <input 
-              type="text" 
-              className="search-input"
-              placeholder="e.g. Plan a 5-day trip to Tokyo next month. I love nature and quiet places."
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-            />
-            <button type="submit" className="btn-search" disabled={!prompt.trim()}>
-              Generate Plan
-            </button>
-          </form>
-
-          <div className="featured-section" style={{ width: '100%', maxWidth: '1200px', margin: '4rem auto', padding: '0 2rem' }}>
-            <h2 className="section-title">Trending Global Destinations</h2>
-            <div className="grid-3">
-              {/* Card 1 */}
-              <div className="eco-card">
-                <div className="card-img-placeholder">
-                  <img src="/dest_tokyo.jpg" alt="Tokyo" />
-                </div>
-                <h3 className="text-primary text-xl font-bold" style={{marginBottom: '0.5rem'}}>Neon Tokyo, Japan</h3>
-                <p className="text-light">Experience the ultimate blend of ancient tradition and futuristic metropolis.</p>
-              </div>
-              {/* Card 2 */}
-              <div className="eco-card">
-                <div className="card-img-placeholder">
-                  <img src="/dest_nyc.jpg" alt="New York City" />
-                </div>
-                <h3 className="text-primary text-xl font-bold" style={{marginBottom: '0.5rem'}}>New York City, USA</h3>
-                <p className="text-light">Discover the city that never sleeps from Broadway to Central Park.</p>
-              </div>
-              {/* Card 3 */}
-              <div className="eco-card">
-                <div className="card-img-placeholder">
-                  <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Dubai" />
-                </div>
-                <h3 className="text-primary text-xl font-bold" style={{marginBottom: '0.5rem'}}>Luxurious Dubai, UAE</h3>
-                <p className="text-light">Explore towering skyscrapers and modern oasis retreats in the desert.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* LOADING VIEW */}
-      {view === 'loading' && (
-        <div className="fullscreen-loader view-enter">
-          <div className="leaf-spinner"></div>
-          <p className="text-xl text-primary font-bold" style={{marginTop: '2rem'}}>Designing your perfect getaway...</p>
-          <p className="text-light">Analyzing eco-friendly flights, hotels, and researching local nature spots.</p>
-        </div>
-      )}
-
-      {/* RESULTS VIEW */}
-      {view === 'results' && response && (
-        <div className="dashboard-container view-enter">
-          
-          {/* Sidebar */}
-          <aside className="sidebar">
-            <p className="sidebar-title">Trip Services</p>
-            <button 
-              className={`sidebar-tab ${activeTab === 'itinerary' ? 'active' : ''}`}
-              onClick={() => setActiveTab('itinerary')}
-            >
-              Itinerary
-            </button>
-            
-            {response.flights && (
+        <div className="relative">
+          {/* Subtle error display banner */}
+          {apiError && (
+            <div className="bg-[#F3E3DA] border-b border-[#D7B7A7] text-[#6F3E32] py-3.5 px-6 text-center text-sm font-semibold select-none z-50 relative flex items-center justify-center gap-2">
+              <span>⚠️</span>
+              <span>{apiError} (Ensure backend server runs on localhost:8000)</span>
               <button 
-                className={`sidebar-tab ${activeTab === 'flights' ? 'active' : ''}`}
-                onClick={() => setActiveTab('flights')}
+                onClick={() => setApiError(null)} 
+                className="bg-transparent border-none font-bold text-lg cursor-pointer ml-4 leading-none text-[#6F3E32]"
               >
-                Flights
+                ×
               </button>
-            )}
-
-            {response.hotels && response.hotels.length > 0 && (
-              <button 
-                className={`sidebar-tab ${activeTab === 'hotels' ? 'active' : ''}`}
-                onClick={() => setActiveTab('hotels')}
-              >
-                Hotels
-              </button>
-            )}
-
-            {response.weather && (
-              <button 
-                className={`sidebar-tab ${activeTab === 'weather' ? 'active' : ''}`}
-                onClick={() => setActiveTab('weather')}
-              >
-                Weather
-              </button>
-            )}
-          </aside>
-
-          {/* Main Panel Content */}
-          <main className="dashboard-main">
-            <div className="dashboard-header">
-              <h2 className="dashboard-title">
-                {activeTab === 'itinerary' && 'Personal Itinerary'}
-                {activeTab === 'flights' && 'Eco-Friendly Flights'}
-                {activeTab === 'hotels' && 'Sustainable Stays'}
-                {activeTab === 'weather' && 'Local Weather'}
-              </h2>
-              <div className="flex-row">
-                <span className={`badge ${response.status === 'complete' ? 'badge-success' : response.status === 'needs_clarification' ? 'badge-warning' : 'badge-error'}`}>
-                  {response.status.toUpperCase()}
-                </span>
-                {response.status === 'complete' && (
-                  <button onClick={() => window.print()} className="btn-primary" style={{padding: '0.5rem 1rem'}}>
-                    <span>📥</span> Download PDF
-                  </button>
-                )}
-              </div>
             </div>
-
-            {response.clarification_question && (
-              <div className="eco-card" style={{ background: '#fefce8', borderColor: '#fef08a', marginBottom: '2rem' }}>
-                <h3 className="text-primary">Clarification Needed</h3>
-                <p>{response.clarification_question}</p>
-              </div>
-            )}
-
-            <div className="tab-content">
-              {/* ITINERARY TAB */}
-              {activeTab === 'itinerary' && response.status === 'error' && (
-                <div className="eco-card" style={{ padding: '2.5rem 3rem', background: '#fef2f2', borderColor: '#fca5a5' }}>
-                  <h3 className="text-xl" style={{ color: '#dc2626', marginBottom: '1rem' }}>{response.message}</h3>
-                  {response.errors && response.errors.length > 0 && (
-                    <ul style={{ color: '#991b1b', listStyleType: 'disc', paddingLeft: '1.5rem', marginTop: '1rem' }}>
-                      {response.errors.map((err, idx) => (
-                        <li key={idx}>{err}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {response.message === 'Failed to connect to the server.' && (
-                    <p style={{ color: '#991b1b', marginTop: '1rem' }}>
-                      Please ensure the backend FastAPI server is running on port 8000.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'itinerary' && response.itinerary && (
-                <div className="eco-card" style={{ padding: '2.5rem 3rem' }}>
-                  <p className="text-xl" style={{ marginBottom: '2rem', color: 'var(--primary)', fontWeight: '600', borderBottom: '2px solid rgba(58, 106, 69, 0.1)', paddingBottom: '1rem' }}>{response.message}</p>
-                  <div className="markdown-body" style={{ fontFamily: "'Lora', serif", lineHeight: '2', fontSize: '1.15rem', color: '#2c3e35' }}>
-                    <ReactMarkdown>{response.itinerary}</ReactMarkdown>
-                  </div>
-                </div>
-              )}
-
-              {/* FLIGHTS TAB */}
-              {activeTab === 'flights' && response.flights && (
-                <div className="grid-2">
-                  {response.flights.length === 0 ? (
-                    <div className="eco-card" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-                      <h4 className="text-primary text-xl">No Flights Found</h4>
-                      <p>We couldn't find any flights for your trip. Please check your dates or origin/destination.</p>
-                    </div>
-                  ) : (
-                    response.flights.map((flight, idx) => (
-                      <div key={idx} className="eco-card">
-                        <div className="card-img-placeholder">
-                          <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Flight" />
-                        </div>
-                        <h4 className="text-primary text-xl" style={{ marginBottom: '0.5rem' }}>{flight.airline}</h4>
-                        <p><strong>Price:</strong> ${flight.price}</p>
-                        <p><strong>Duration:</strong> {flight.duration}</p>
-                        {flight.departure_time && <p><strong>Departure:</strong> {flight.departure_time}</p>}
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {/* HOTELS TAB */}
-              {activeTab === 'hotels' && response.hotels && (
-                <div className="grid-2">
-                  {response.hotels.map((hotel, idx) => (
-                    <div key={idx} className="eco-card">
-                      <div className="card-img-placeholder">
-                        <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Hotel" />
-                      </div>
-                      <h4 className="text-primary text-xl" style={{ marginBottom: '0.5rem' }}>{hotel.name}</h4>
-                      <p><strong>Price:</strong> ${hotel.price_per_night} / night</p>
-                      {hotel.rating && <p><strong>Rating:</strong> {hotel.rating} / 5</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* WEATHER TAB */}
-              {activeTab === 'weather' && response.weather && (
-                <div className="eco-card" style={{ textAlign: 'center', background: 'var(--accent)', borderColor: 'var(--secondary)' }}>
-                  <p className="text-xl font-bold text-primary" style={{ margin: 0 }}>
-                    Forecast for {response.weather.location}: {response.weather.summary}
-                  </p>
-                </div>
-              )}
-            </div>
-
-          </main>
-        </div>
-      )}
-      {/* ABOUT MODAL */}
-      {showAbout && (
-        <div className="modal-overlay" onClick={() => setShowAbout(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowAbout(false)}>×</button>
-            <h2 className="text-primary" style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>About Wanderlust AI</h2>
-            
-            <div className="flex-col" style={{ gap: '1.5rem' }}>
-              <div>
-                <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-color)' }}>Our Mission</h3>
-                <p className="text-light" style={{ lineHeight: '1.6' }}>
-                  Wanderlust AI exists to bridge the gap between exploring the world and protecting it. 
-                  We use advanced AI to make sustainable travel effortless, curating experiences that respect the environment.
-                </p>
-              </div>
-
-              <div>
-                <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-color)' }}>How It Works</h3>
-                <p className="text-light" style={{ lineHeight: '1.6' }}>
-                  Behind the scenes, our platform is powered by a multi-agent AI system (LangGraph & Gemini). 
-                  It autonomously cross-references real-time flights, weather, and eco-friendly hotels to build the perfect, personalized itinerary.
-                </p>
-              </div>
-
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--accent)', borderRadius: '12px' }}>
-                <p className="font-bold text-primary" style={{ textAlign: 'center', margin: 0 }}>
-                  Built for the Future of Travel. 🌱
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CHATBOT WIDGET */}
-      {view === 'results' && chatSessionId && (
-        <div className={`chat-widget ${isChatOpen ? 'open' : ''}`}>
-          {isChatOpen ? (
-            <div className="chat-window shadow-xl">
-              <div className="chat-header">
-                <h3>Travel Assistant</h3>
-                <button className="chat-close" onClick={() => setIsChatOpen(false)}>×</button>
-              </div>
-              <div className="chat-messages">
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={`chat-message ${msg.role}`}>
-                    {msg.content}
-                  </div>
-                ))}
-                {isChatLoading && <div className="chat-message assistant typing">...</div>}
-              </div>
-              <form className="chat-input-area" onSubmit={handleChatSubmit}>
-                <input 
-                  type="text" 
-                  placeholder="Ask about your trip..." 
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  disabled={isChatLoading}
-                />
-                <button type="submit" disabled={!chatInput.trim() || isChatLoading}>Send</button>
-              </form>
-            </div>
-          ) : (
-            <button className="chat-toggle shadow-xl" onClick={() => setIsChatOpen(true)}>
-              💬 Ask AI
-            </button>
           )}
+          <Hero onNavigateLogin={() => setView('login')} onPlanTrip={handlePlanTrip} />
         </div>
       )}
-    </>
-  )
+
+      {/* 2. LOGIN VIEW */}
+      {view === 'login' && (
+        <Login onNavigateHome={() => setView('home')} />
+      )}
+
+      {/* 3. LOADING SPINNER VIEW */}
+      {view === 'loading' && (
+        <div className="paper-texture min-h-svh w-full flex flex-col items-center justify-center relative z-0">
+          {/* Background watercolor blur */}
+          <div className="absolute top-[20%] left-[20%] w-[350px] h-[350px] rounded-full bg-[#E8DDC7]/25 blur-[100px] pointer-events-none -z-10" />
+          <div className="absolute bottom-[20%] right-[20%] w-[350px] h-[350px] rounded-full bg-[#D9CBB2]/20 blur-[100px] pointer-events-none -z-10" />
+          
+          <div className="flex flex-col items-center text-center gap-8 select-none">
+            {/* Spinning Compass SVG */}
+            <div className="animate-spin text-[#A85D3B] duration-1000" style={{ animationDuration: '3s' }}>
+              <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="50" cy="50" r="40" strokeDasharray="3 3" />
+                <path d="M50 10 L50 90 M10 50 L90 50" />
+                <polygon points="50,50 54,20 50,12 46,20" fill="currentColor" opacity="0.8" />
+                <polygon points="50,50 46,80 50,88 54,80" fill="currentColor" opacity="0.3" />
+              </svg>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="font-typewriter text-4xl font-bold tracking-tight text-[#111111]">wandor</span>
+              <p className="font-display text-2xl font-medium text-[#6F6A62] italic max-w-[450px]">
+                Crafting your personalized travel itinerary, recommended flights, and accommodation details...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. CLARIFICATION VIEW */}
+      {view === 'clarify' && response && (
+        <div className="paper-texture min-h-svh w-full flex flex-col items-center justify-center p-6 relative z-0">
+          {/* Background blurs */}
+          <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] rounded-full bg-[#E8DDC7]/25 blur-[100px] pointer-events-none -z-10" />
+          
+          <div className="bg-[#FBF8F1] border border-[#DED7CA] rounded-[28px] max-w-[620px] w-full p-10 max-md:p-6 shadow-[0_12px_40px_rgba(45,35,25,0.06)] flex flex-col gap-6 relative">
+            <span className="text-[#A85D3B] text-[20px] font-bold select-none">✦</span>
+            
+            <div className="flex flex-col gap-2">
+              <h2 className="font-display text-3xl font-semibold text-[#111111] leading-tight">
+                Help us plan your trip.
+              </h2>
+              <p className="text-[15px] font-semibold text-[#A85D3B] mt-2 bg-[#F3E3DA] p-4.5 rounded-xl border border-[#D7B7A7]">
+                {response.clarification_question}
+              </p>
+            </div>
+
+            <form onSubmit={handleClarifySubmit} className="flex flex-col gap-4">
+              <textarea
+                value={clarificationText}
+                onChange={(e) => setClarificationText(e.target.value)}
+                placeholder="Enter details here (e.g. departing on March 24, budget of $2000, 2 travelers)..."
+                className="w-full h-32 px-4 py-3 bg-[#F7F3EA] border border-[#D8D1C5] rounded-xl text-sm outline-none resize-none transition-all placeholder:text-[#A6A096] focus:border-[#111111]"
+              />
+
+              <div className="flex gap-4 items-center">
+                <button
+                  type="button"
+                  onClick={() => setView('home')}
+                  className="w-1/2 h-13 bg-transparent border border-[#D8CBB7] hover:bg-[#F2EDE4] text-xs font-semibold rounded-full text-[#514133] transition-all cursor-pointer"
+                >
+                  Cancel Plan
+                </button>
+                <button
+                  type="submit"
+                  disabled={!clarificationText.trim()}
+                  className="w-1/2 h-13 bg-[#111111] hover:bg-[#2A2926] disabled:bg-[#8A847A] text-[#F7F3EA] text-xs font-semibold rounded-full transition-all cursor-pointer shadow-sm"
+                >
+                  Continue Planning
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. RESULTS VIEW */}
+      {view === 'results' && response && (
+        <Results 
+          response={response} 
+          onNavigateHome={() => setView('home')} 
+          session_id={sessionId} 
+        />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;

@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     tavily_api_key: str = ""
     aviationstack_api_key: str = ""
 
-    gemini_model: str = "gemini-3.5-flash"
+    gemini_model: str = "gemini-3.6-flash"
+    gemini_fallback_models: list[str] = ["gemini-3.5-flash", "gemini-3.6-pro", "gemini-2.5-flash"]
+    groq_api_key_fallback: str = ""
+    groq_fallback_model: str = "openai/gpt-oss-20b"
 
     serpapi_base_url: str = "https://serpapi.com/search.json"
     openweather_base_url: str = "https://api.openweathermap.org/data/2.5"

@@ -1,4 +1,4 @@
-# AI-Powered Multi-Agent Travel Planner
+# WandorAI — AI-Powered Multi-Agent Travel Planner
 
 An intelligent travel planning assistant that turns a natural-language sentence into a complete, data-informed travel plan. Enter requests like:
 

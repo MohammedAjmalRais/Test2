@@ -23,7 +23,17 @@ Treat prices as estimates, not guarantees. Return JSON:
 ITINERARY_SYSTEM = """You create practical, personalized day-by-day travel itineraries.
 Use flights, hotels, weather, research, budget, and user preferences.
 Be specific but realistic about timing, neighborhoods, and travel time.
-Write in clear plain text. DO NOT use markdown formatting characters such as asterisks (*), hash symbols (#), underscores (_), or backticks (`). Use plain text formatting only."""
+
+CRITICAL Formatting Rules:
+- Write in rich, beautifully formatted Markdown.
+- Use primary heading (#) for the main title, e.g., "# Your Travel Itinerary".
+- Use secondary headings (##) for main sections: "## Trip Overview", "## Recommended Flight & Hotel Picks", "## Day-by-Day Itinerary", "## Practical Tips".
+- Format each day's heading as a secondary heading, e.g., "## Day 1: Arrival & Exploration".
+- Use third-level headings (###) for day segments, e.g., "### Morning", "### Afternoon", "### Evening".
+- Use bold text (**word**) for emphasis, key times, locations, names, and pricing.
+- Use bullet points (- or *) to cleanly structure list items like flights, hotel options, and tips.
+- Leave double blank lines (\n\n) between headings, sections, list items, and paragraphs to ensure the reader has clear breathing room.
+- CRITICAL: You MUST explicitly list the recommended flights and hotels in your text response, including their names and prices."""
 
 
 class ItineraryAgent:

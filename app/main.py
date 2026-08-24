@@ -9,7 +9,7 @@ from app.rag_service import init_vector_store, query_itinerary_stream
 from fastapi.responses import StreamingResponse
 
 app = FastAPI(
-    title="AI Travel Planner",
+    title="WandorAI Travel Planner",
     description=(
         "Multi-agent travel planning system powered by LangGraph, SerpAPI, "
         "OpenWeather, Tavily, and Gemini."

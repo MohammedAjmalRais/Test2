@@ -30,14 +30,18 @@ class FlightSearchAgent:
             )
             return [], errors
 
-        payload = await self.api.search_flights(
-            origin_iata=origin_iata,
-            destination_iata=dest_iata,
-            departure_date=context.departure_date,
-            return_date=context.return_date,
-            adults=context.travelers,
-            currency=context.currency,
-        )
+        try:
+            payload = await self.api.search_flights(
+                origin_iata=origin_iata,
+                destination_iata=dest_iata,
+                departure_date=context.departure_date,
+                return_date=context.return_date,
+                adults=context.travelers,
+                currency=context.currency,
+            )
+        except Exception as e:
+            errors.append(f"Flight search failed: {str(e)}")
+            return [], errors
 
         if payload.get("error"):
             errors.append(str(payload["error"]))

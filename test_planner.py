@@ -13,7 +13,8 @@ async def main():
     print("MESSAGE:", res.message)
     print("ERRORS:", res.errors)
     print("FLIGHTS_LEN:", len(res.flights))
-    print("FLIGHTS:", res.flights)
+    print("HOTELS_LEN:", len(res.hotels))
+    print("HOTELS:", res.hotels)
 
 if __name__ == "__main__":
     asyncio.run(main())

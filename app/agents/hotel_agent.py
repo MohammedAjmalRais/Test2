@@ -14,14 +14,28 @@ class HotelSearchAgent:
         if not context.departure_date or not context.return_date:
             return [], ["Check-in and check-out dates are required for hotel search"]
 
+        import re
+        def format_date(d: str) -> str:
+            if re.match(r"^\d{2}-\d{2}-\d{4}$", d):
+                parts = d.split('-')
+                return f"{parts[2]}-{parts[1]}-{parts[0]}"
+            return d
+            
+        check_in = format_date(context.departure_date)
+        check_out = format_date(context.return_date)
+
         query = f"hotels in {context.destination}"
-        payload = await self.api.search_hotels(
-            query=query,
-            check_in=context.departure_date,
-            check_out=context.return_date,
-            adults=context.travelers,
-            currency=context.currency,
-        )
+        try:
+            payload = await self.api.search_hotels(
+                query=query,
+                check_in=check_in,
+                check_out=check_out,
+                adults=context.travelers,
+                currency=context.currency,
+            )
+        except Exception as e:
+            errors.append(f"Hotel search failed: {str(e)}")
+            return [], errors
 
         if payload.get("error"):
             errors.append(str(payload["error"]))

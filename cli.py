@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interactive CLI for the AI travel planner."""
+"""Interactive CLI for the WandorAI travel planner."""
 
 import asyncio
 import sys
@@ -9,7 +9,7 @@ from app.models import TravelPlanRequest
 
 
 async def run_cli() -> None:
-    print("AI Travel Planner")
+    print("WandorAI Travel Planner")
     print("Enter a natural-language travel request (or 'quit' to exit).\n")
 
     session_context = None
