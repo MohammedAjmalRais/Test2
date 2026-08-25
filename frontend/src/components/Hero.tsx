@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 
 interface HeroProps {
   onNavigateLogin: () => void;
@@ -6,14 +6,9 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onNavigateLogin, onPlanTrip }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [promptText, setPromptText] = useState(
     "Plan a 7-day trip to Tokyo from Hyderabad with a moderate budget starting March 24, 2026."
   );
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
 
   return (
     <section className="relative min-h-svh w-full overflow-hidden">
@@ -64,23 +59,6 @@ export const Hero: React.FC<HeroProps> = ({ onNavigateLogin, onPlanTrip }) => {
               onChange={(e) => setPromptText(e.target.value)}
               className="absolute left-[29px] top-[24px] w-[640px] max-md:w-[calc(100%-58px)] h-[90px] bg-transparent border-none outline-none font-sans text-xl max-md:text-[17px] font-medium text-wandor-prompt text-left leading-relaxed resize-none overflow-y-auto focus:ring-0 focus:outline-none"
               placeholder="Describe your dream trip..."
-            />
-
-            {/* Upload Button */}
-            <button
-              onClick={handleUploadClick}
-              className="absolute left-[21px] top-[137px] w-11 h-11 bg-transparent border border-white/70 rounded-full cursor-pointer flex items-center justify-center backdrop-blur-[14px] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
-              aria-label="Upload inspiration"
-            >
-              <span className="text-[18px] font-bold text-black select-none">↑</span>
-            </button>
-
-            {/* Hidden File Input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
             />
 
             {/* Plan My Trip Button inside card */}

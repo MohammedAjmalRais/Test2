@@ -510,60 +510,74 @@ export const Results: React.FC<ResultsProps> = ({ response, onNavigateHome, sess
         {/* ==================== ITINERARY TAB CONTENT ==================== */}
         {activeTab === 'itinerary' && response.itinerary && (
           <div className="bg-[#FBF8F1] border border-[#DED7CA] rounded-[28px] p-9 max-md:p-6 shadow-[0_8px_32px_rgba(40,32,20,0.03)] flex flex-col gap-6">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-[#E7E1D7]">
-              <Compass className="w-5 h-5 text-[#A85D3B]" />
-              <h2 className="font-display text-[26px] font-semibold text-[#111111]">
-                Your personalized travel plan
-              </h2>
+            <div className="flex items-center justify-between pb-2 border-b border-[#E7E1D7] select-none">
+              <div className="flex items-center gap-2.5">
+                <Compass className="w-5 h-5 text-[#A85D3B]" />
+                <h2 className="font-display text-[26px] font-semibold text-[#111111]">
+                  Your personalized travel plan
+                </h2>
+              </div>
+              <button
+                onClick={() => window.print()}
+                className="bg-transparent border border-[#D8CBB7] hover:bg-[#F2EDE4] text-xs font-semibold px-4 py-2 rounded-full cursor-pointer text-[#514133] transition-colors active:scale-95 flex items-center gap-2"
+              >
+                Download PDF
+              </button>
             </div>
             
-            <article className="markdown-body font-body leading-relaxed text-[#111111] prose max-w-none text-[15px]">
-              <ReactMarkdown>{response.itinerary}</ReactMarkdown>
-            </article>
+            <div className="printable-itinerary flex flex-col gap-6 bg-transparent">
+              <h1 className="hidden print:block font-display text-[32px] font-bold text-black border-b border-[#DED7CA] pb-4 mb-4">
+                Wandor Travel Itinerary: {originLabel} to {destLabel}
+              </h1>
 
-            {/* Budget Summary Section */}
-            {response.budget && (
-              <div className="mt-6 border-t border-[#E7E1D7] pt-6 flex flex-col gap-4">
-                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  <TrendingUp className="w-4.5 h-4.5 text-[#A85D3B]" /> Estimated Budget Summary
-                </h3>
-                <div className="grid grid-cols-5 gap-4 max-md:grid-cols-2">
-                  <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[#8A847A]">Flights</span>
-                    <span className="text-lg font-bold text-[#111111] mt-1">
-                      {response.budget.flights ? `₹${response.budget.flights.toLocaleString()}` : 'N/A'}
-                    </span>
+              <article className="markdown-body font-body leading-relaxed text-[#111111] prose max-w-none text-[15px]">
+                <ReactMarkdown>{response.itinerary}</ReactMarkdown>
+              </article>
+
+              {/* Budget Summary Section */}
+              {response.budget && (
+                <div className="mt-6 border-t border-[#E7E1D7] pt-6 flex flex-col gap-4">
+                  <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    <TrendingUp className="w-4.5 h-4.5 text-[#A85D3B]" /> Estimated Budget Summary
+                  </h3>
+                  <div className="grid grid-cols-5 gap-4 max-md:grid-cols-2">
+                    <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[#8A847A]">Flights</span>
+                      <span className="text-lg font-bold text-[#111111] mt-1">
+                        {response.budget.flights ? `₹${response.budget.flights.toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[#8A847A]">Hotels</span>
+                      <span className="text-lg font-bold text-[#111111] mt-1">
+                        {response.budget.accommodation ? `₹${response.budget.accommodation.toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[#8A847A]">Food & Transit</span>
+                      <span className="text-lg font-bold text-[#111111] mt-1">
+                        {response.budget.food ? `₹${(response.budget.food + (response.budget.local_transport || 0)).toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[#8A847A]">Activities</span>
+                      <span className="text-lg font-bold text-[#111111] mt-1">
+                        {response.budget.activities ? `₹${response.budget.activities.toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-[#111111] p-4 rounded-xl flex flex-col max-md:col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-[#A85D3B]">Total Est.</span>
+                      <span className="text-xl font-bold text-[#F7F3EA] mt-1">
+                        {response.budget.total ? `₹${response.budget.total.toLocaleString()}` : 'N/A'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[#8A847A]">Hotels</span>
-                    <span className="text-lg font-bold text-[#111111] mt-1">
-                      {response.budget.accommodation ? `₹${response.budget.accommodation.toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[#8A847A]">Food & Transit</span>
-                    <span className="text-lg font-bold text-[#111111] mt-1">
-                      {response.budget.food ? `₹${(response.budget.food + (response.budget.local_transport || 0)).toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#DED7CA] flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[#8A847A]">Activities</span>
-                    <span className="text-lg font-bold text-[#111111] mt-1">
-                      {response.budget.activities ? `₹${response.budget.activities.toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="bg-[#111111] p-4 rounded-xl flex flex-col max-md:col-span-2">
-                    <span className="text-[10px] uppercase font-bold text-[#A85D3B]">Total Est.</span>
-                    <span className="text-xl font-bold text-[#F7F3EA] mt-1">
-                      {response.budget.total ? `₹${response.budget.total.toLocaleString()}` : 'N/A'}
-                    </span>
-                  </div>
+                  {response.budget.notes && (
+                    <p className="text-xs italic text-[#6F6A62] mt-1">{response.budget.notes}</p>
+                  )}
                 </div>
-                {response.budget.notes && (
-                  <p className="text-xs italic text-[#6F6A62] mt-1">{response.budget.notes}</p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 

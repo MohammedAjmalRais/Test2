@@ -100,3 +100,66 @@ body {
   border-top: 1px solid #DED7CA;
   margin: 2rem 0;
 }
+
+@media print {
+  /* Hide all elements on the page */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Make only the printable itinerary container and its descendants visible */
+  .printable-itinerary, 
+  .printable-itinerary * {
+    visibility: visible;
+  }
+  
+  /* Position the printable content cleanly at the top-left of the PDF page */
+  .printable-itinerary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+  }
+  
+  /* Reset background styles for printed output */
+  body, html {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+  }
+
+  .markdown-body {
+    color: #000000 !important;
+  }
+
+  .markdown-body h2 {
+    color: #000000 !important;
+    border-bottom: 1px solid #cccccc;
+    margin-top: 2rem !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .markdown-body h3 {
+    color: #000000 !important;
+    margin-top: 1.5rem !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .markdown-body p, 
+  .markdown-body ul, 
+  .markdown-body li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Hide custom borders or boxes on printing if needed for clean layout */
+  .printable-itinerary .border {
+    border-color: #dddddd !important;
+  }
+}
+
